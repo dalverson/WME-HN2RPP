@@ -37,6 +37,12 @@
   };
  
   function txt(id) {
+	let texts = {
+		makePoiButtonText: 'HN → RPP',
+      		noDuplicatesLabel: 'No POI duplicates',
+      		defaultLockLevel: 'Default lock level'
+	};
+	
     return locales[I18n.locale] === undefined ? locales['en'][id] : locales[I18n.locale][id];
   }
  
