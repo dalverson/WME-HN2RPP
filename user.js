@@ -1,6 +1,6 @@
 // ==UserScript==
-// @name         WME-HN2RPP
-// @version      2021.7.31.5
+// @name         WME HN2RPP
+// @version      2021.7.31.6
 // @description  Converts HouseNumbers to RPPs
 // @author       njs923/nicknick923
 // @include      /^https:\/\/(www|beta)\.waze\.com(\/\w{2,3}|\/\w{2,3}-\w{2,3}|\/\w{2,3}-\w{2,3}-\w{2,3})?\/editor\b/
