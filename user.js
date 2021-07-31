@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         WME-HN2RPP
-// @version      2021.7.31.3
+// @version      2021.7.31.4
 // @description  Converts HouseNumbers to RPPs
 // @author       njs923/nicknick923
 // @include      /^https:\/\/(www|beta)\.waze\.com(\/\w{2,3}|\/\w{2,3}-\w{2,3}|\/\w{2,3}-\w{2,3}-\w{2,3})?\/editor\b/
@@ -88,7 +88,7 @@
         let texts = {
             makeRPPButtonText: 'HN→RPP (EP on HN)',
             makeStreetSideRPPButtonText: 'HN→RPP (EP on street)',
-            makeRPPTitleText: 'Creates RPPs where the entry point (EP) is at the old HN location',
+            makeRPPTitleText: 'Creates RPPs with entry point (EP) at HN location',
             makeStreetSideRPPTitleText: 'Creates RPPs with entry point (EP) at HN entry point',
             noDuplicatesLabel: 'No RPP duplicates',
             delHNButtonText: "Delete HN",
