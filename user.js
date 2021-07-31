@@ -86,8 +86,8 @@
 
     function txt(id) {
         let texts = {
-            makeRPPButtonText: 'HN→RPP (HN)',
-            makeStreetSideRPPButtonText: 'HN→RPP (Street Side)',
+            makeRPPButtonText: 'HN→RPP (EP on HN)',
+            makeStreetSideRPPButtonText: 'HN→RPP (EP on street)',
             makeRPPTitleText: 'Creates RPPs where the EP is at the old HN location',
             makeStreetSideRPPTitleText: 'Creates RPPs where the EP is at the street side',
             noDuplicatesLabel: 'No RPP duplicates',
