@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         WME HN2RPP
-// @version      2021.7.31.6
+// @version      2021.7.31.7
 // @description  Converts HouseNumbers to RPPs
 // @author       njs923/nicknick923
 // @include      /^https:\/\/(www|beta)\.waze\.com(\/\w{2,3}|\/\w{2,3}-\w{2,3}|\/\w{2,3}-\w{2,3}-\w{2,3})?\/editor\b/
@@ -34,7 +34,7 @@
     function init() {
         log('init');
         W.selectionManager.events.register("selectionchanged", null, onSelect);
-        W.editingMediator.on('change:editingHouseNumbers', onEditingHN);
+        //W.editingMediator.on('change:editingHouseNumbers', onEditingHN);
 
         const scriptName = 'hn2rpp';
 
@@ -91,7 +91,7 @@
             makeRPPTitleText: 'Creates RPPs with entry point (EP) at HN location',
             makeStreetSideRPPTitleText: 'Creates RPPs with entry point (EP) at HN entry point',
             noDuplicatesLabel: 'No RPP duplicates',
-            delHNButtonText: "Delete HN",
+            //delHNButtonText: "Delete HN",
             defaultLockLevel: 'Default lock level',
             defaultPlacement: 'Default Entry Point Placement to HN location'
         };
@@ -268,15 +268,15 @@
         q('#edit-panel .tab-pane').insertBefore(pane, q('#edit-panel .tab-pane .more-actions'));
     }
 
-    function onEditingHN() {
+    /*function onEditingHN() {
         const delHNbtn = newEl('div', {className: 'toolbar-button', style: 'float: left', innerText: txt('delHNButtonText')});
         delHNbtn.addEventListener('click', delHN);
         setTimeout(() => {
             $('#primary-toolbar').find('.add-house-number').after(delHNbtn);
         }, 500)
-    }
+    }*/
 
-    function delHN() {
+    /*function delHN() {
         const features = W.selectionManager.getSelectedFeatures();
 
         if (!features || features.length === 0 || features[0].model.type !== "segment" || !features.some(f => f.model.attributes.hasHNs)) return;
@@ -297,7 +297,7 @@
                 }
             });
         });
-    }
+    }*/
 
     function hasDuplicates(poi, addr, hn) {
         const venues = W.model.venues.objects;
