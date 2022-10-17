@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         WME HN2RPP
-// @version      2021.7.31.7
+// @version      2022.10.17.1
 // @description  Converts HouseNumbers to RPPs
 // @author       njs923/nicknick923
 // @include      /^https:\/\/(www|beta)\.waze\.com(\/\w{2,3}|\/\w{2,3}-\w{2,3}|\/\w{2,3}-\w{2,3}-\w{2,3})?\/editor\b/
@@ -255,49 +255,25 @@
 
         if (!features || features.length === 0 || features[0].model.type !== "segment" || !features.some(f => f.model.attributes.hasHNs)) return;
 
-        const pane = newEl('div', {className: 'form-group'});
-        const makeRPPBtn = newEl('button', {className: 'waze-btn waze-btn-white action-button', style: 'display: inline-block', innerText: txt('makeRPPButtonText'), title: txt('makeRPPTitleText')});
-        const makeRPPStreetSideBtn = newEl('button', {className: 'waze-btn waze-btn-white action-button', style: 'display: inline-block', innerText: txt('makeStreetSideRPPButtonText'), title: txt('makeStreetSideRPPTitleText')});
+        const makeRPPBtn = newEl('wz-button', {
+            size: 'sm',
+            innerText: txt('makeRPPButtonText'),
+            title: txt('makeRPPTitleText')});
+
+        const makeRPPStreetSideBtn = newEl('wz-button', {
+            size: 'sm',
+            innerText: txt('makeStreetSideRPPButtonText'),
+            title: txt('makeStreetSideRPPTitleText')});
+
+        makeRPPBtn.setAttribute('color', 'secondary');
+        makeRPPStreetSideBtn.setAttribute('color', 'secondary');
 
         makeRPPBtn.addEventListener('click', makeHNRPP);
         makeRPPStreetSideBtn.addEventListener('click', makeStreetSideRPP);
 
-        pane.appendChild(makeRPPBtn);
-        pane.appendChild(makeRPPStreetSideBtn);
-
-        q('#edit-panel .tab-pane').insertBefore(pane, q('#edit-panel .tab-pane .more-actions'));
+        q('.more-actions').appendChild(makeRPPBtn);
+        q('.more-actions').appendChild(makeRPPStreetSideBtn);
     }
-
-    /*function onEditingHN() {
-        const delHNbtn = newEl('div', {className: 'toolbar-button', style: 'float: left', innerText: txt('delHNButtonText')});
-        delHNbtn.addEventListener('click', delHN);
-        setTimeout(() => {
-            $('#primary-toolbar').find('.add-house-number').after(delHNbtn);
-        }, 500)
-    }*/
-
-    /*function delHN() {
-        const features = W.selectionManager.getSelectedFeatures();
-
-        if (!features || features.length === 0 || features[0].model.type !== "segment" || !features.some(f => f.model.attributes.hasHNs)) return;
-
-        const DeleteHouseNumberAction = require('Waze/Actions/DeleteHouseNumber');
-        const segments = [];
-        const houseNumbers = W.model.segmentHouseNumbers.getObjectArray();
-
-        features.forEach(f => {
-            if (!f.model.attributes.hasHNs) return;
-            segments.push(f.model.attributes.id);
-        });
-
-        segments.forEach(segID => {
-            houseNumbers.forEach(hn => {
-                if (hn.getSegmentId() == segID) {
-                    W.model.actionManager.add(new DeleteHouseNumberAction(hn));
-                }
-            });
-        });
-    }*/
 
     function hasDuplicates(poi, addr, hn) {
         const venues = W.model.venues.objects;
