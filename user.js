@@ -1,42 +1,59 @@
 // ==UserScript==
 // @name         WME HN2RPP
-// @version      2022.10.17.1
+// @version      2024.06.28.1
 // @description  Converts HouseNumbers to RPPs
 // @author       njs923/nicknick923
-// @include      /^https:\/\/(www|beta)\.waze\.com(\/\w{2,3}|\/\w{2,3}-\w{2,3}|\/\w{2,3}-\w{2,3}-\w{2,3})?\/editor\b/
-// @require      https://greasyfork.org/scripts/24851-wazewrap/code/WazeWrap.js
-// @require      https://greasyfork.org/scripts/38421-wme-utils-navigationpoint/code/WME%20Utils%20-%20NavigationPoint.js?version=251065
+// @match        https://beta.waze.com/*editor*
+// @match        https://www.waze.com/*editor*
+// @exclude      https://www.waze.com/*user/*editor/*
+// @require      https://greasyfork.org/scripts/38421-wme-utils-navigationpoint/code/WME%20Utils%20-%20NavigationPoint.js
 // @grant        none
 // @namespace    https://greasyfork.org/users/783417
 // ==/UserScript==
-/* global W, WazeWrap, NavigationPoint, I18n, OpenLayers, require, $ */
+/* global W, NavigationPoint, I18n, OpenLayers, require, $ */
 (function() {
     'use strict';
-
-    function log(m) { console.log('%cWME HN2RPP:%c ' + m, 'color: darkcyan; font-weight: bold', 'color: dimgray; font-weight: normal'); }
-    function warn(m) { console.warn('WME HN2RPP: ' + m); }
-    function err(m) { console.error('WME HN2RPP: ' + m); }
-
-    function bootstrap(tries = 1) {
-        if (W && W.map && W.model && $ && WazeWrap.Ready)
-        { init(); }
-        else if (tries < 1000)
-        { setTimeout(function () {bootstrap(++tries);}, 200); }
-    }
 
     const d = window.document;
     const q = d.querySelector.bind(d);
     const qa = d.querySelectorAll.bind(d);
+    const scriptName = 'hn2rpp';
     let settings = {};
     let lastDownloadTime = Date.now();
     let oldSegmentsId = [];
+    let initCount = 0;
+    function log(m) { console.log('%cWME HN2RPP:%c ' + m, 'color: darkcyan; font-weight: bold', 'color: dimgray; font-weight: normal'); }
+    function warn(m) { console.warn('WME HN2RPP: ' + m); }
+    function err(m) { console.error('WME HN2RPP: ' + m); }
+
+    function bootstrap() {
+        if (typeof W === 'object' && W.userscripts?.state.isReady) {
+            onWmeReady();
+        } else {
+            document.addEventListener("wme-ready", onWmeReady, {
+                once: true,
+            });
+        }
+    }
+
+    function onWmeReady()
+    {
+        initCount++;
+        if ($)
+            { init(); }
+        else {
+            if (initCount == 100) {
+                err('jquery not loaded. Giving up.');
+                return;
+            }
+            setTimeout(onWmeReady, 300);
+        }
+    }
 
     function init() {
         log('init');
         W.selectionManager.events.register("selectionchanged", null, onSelect);
         //W.editingMediator.on('change:editingHouseNumbers', onEditingHN);
-
-        const scriptName = 'hn2rpp';
 
         RegisterKeyboardShortcut(scriptName, 'HN2RPP', 'hn-to-rpp', txt('makeRPPButtonText'), makeHNRPP, '-1');
         RegisterKeyboardShortcut(scriptName, 'HN2RPP', 'hn-to-rpp-streetside', txt('makeStreetSideRPPButtonText'), makeStreetSideRPP, '-1');
@@ -48,26 +65,21 @@
         initUI();
     }
 
-    function initUI(){
-        const tabs = q('.nav-tabs'), tabContent = q('#user-info .tab-content');
-
-        if (!tabs || !tabContent) {
-            log('Waze UI not ready...');
-            setTimeout(initUI, 500);
-            return;
-        }
-
+    async function initUI(){
         const tabPaneContent = [
-            '<h4>WME HN2RPP</h4>',
-            `<div class="controls"><div class="controls-container"><label for="hn2rpp-default-lock-level">${txt('defaultLockLevel')}</label><select class="form-control" id="hn2rpp-default-lock-level"><option value="1">1</option>`,
+            '<b>', GM_info.script.name, '</b> ', GM_info.script.version,
+            `<div class="controls"><div class="container"><label for="hn2rpp-default-lock-level">${txt('defaultLockLevel')}</label><select id="hn2rpp-default-lock-level"><option value="1">1</option>`,
             `<option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option></select></div>`,
-            `<div class="controls-container"><input type="checkbox" id="hn2rpp-no-duplicates" /><label for="hn2rpp-no-duplicates">${txt('noDuplicatesLabel')}</label></div></div>`,
+            `<div class="container"><input type="checkbox" id="hn2rpp-no-duplicates" /><label for="hn2rpp-no-duplicates">${txt('noDuplicatesLabel')}</label></div></div>`,
         ].join('');
 
-        const tabPane = newEl('div', {id: 'sidepanel-hn2rpp', className: 'tab-pane', innerHTML: tabPaneContent});
-
-        tabs.appendChild(newEl('li', {innerHTML: '<a href="#sidepanel-hn2rpp" data-toggle="tab">HN2RPP</a>'}));
-        tabContent.appendChild(tabPane);
+        var res = W.userscripts.registerSidebarTab(scriptName);
+        var tabLabel = res.tabLabel;
+        var tabPane = res.tabPane;
+        tabLabel.innerText = "HN2RPP";
+        tabLabel.title = "Convert HNs to RPPs";
+        tabPane.innerHTML = tabPaneContent;
+        await W.userscripts.waitForElementConnected(tabPane);
 
         const s = localStorage.hn2rpp;
         settings = s ? JSON.parse(s) : { noDuplicates: true, defaultLockLevel: 1 };
@@ -107,13 +119,13 @@
         log('Creating RPPs from HouseNumbers')
         const features = W.selectionManager.getSelectedFeatures();
 
-        if (!features || features.length === 0 || features[0].model.type !== "segment" || !features.some(f => f.model.attributes.hasHNs)) return;
+        if (!features || features.length === 0 || features[0].featureType !== "segment" || !features.some(f => f._wmeObject.attributes.hasHNs)) return;
         const segments = [];
 
         // collect all segments ids with HN
         features.forEach(f => {
-            if (!f.model.attributes.hasHNs) return;
-            segments.push(f.model.attributes.id);
+            if (!f._wmeObject.attributes.hasHNs) return;
+            segments.push(f.id);
         });
         // check the currently loaded housenumber objects
         let objHNs = W.model.segmentHouseNumbers.objects;
@@ -158,26 +170,36 @@
         const AddLandmark = require('Waze/Action/AddLandmark');
         const UpdateFeatureAddress = require('Waze/Action/UpdateFeatureAddress');
         const seg = W.model.segments.getObjectById(num.segID);
-        const addr = seg.getAddress().attributes;
+        const addr = seg.getAddress(W.model).attributes;
         const hn = num.number;
+        const fractionPoint = num.fractionPoint;
+        const street = W.model.streets.getObjectById(seg.attributes.primaryStreetID);
+        const streetName = street.attributes.name;
+        const cityID = street.attributes.cityID;
+        const city = W.model.cities.getObjectById(cityID);
+        const stateID = city.attributes.stateID;
+        const countryID = city.attributes.countryID;
+        const houseNumber = hn;
+        const geoJSONGeometry = W.userscripts.toGeoJSONGeometry(num.geometry);
 
         const newAddr = {
-            countryID: addr.country.id,
-            stateID: addr.state.id,
-            cityName: addr.city.attributes.name,
-            emptyCity: addr.city.attributes.name ? null : true,
-            streetName: addr.street.name,
-            streetEmpty: !1,
-            houseNumber: hn
+            emptyStreet: street.attributes.isEmpty, // TODO: fix this
+            stateID,
+            countryID,
+            cityName: city.attributes.name,
+            houseNumber,
+            streetName,
+            emptyCity: city.attributes.isEmpty // TODO: fix this
         };
-
-        const res = new Landmark();
-        if (source === 'JSON'){
+        const residential = true;
+        const categories = ['RESIDENTIAL'];
+        const res = new Landmark({ geoJSONGeometry, categories, residential });
+        /*if (source === 'JSON'){
             res.geometry = new OpenLayers.Geometry.Point(num.geometry.coordinates[0], num.geometry.coordinates[1]).transform(epsg4326, epsg900913);
         } else {
             res.geometry = num.geometry.clone();
-        }
-        res.attributes.residential = true;
+        } */
+
         // set default lock level
         res.attributes.lockRank = settings.defaultLockLevel - 1;
 
@@ -186,9 +208,9 @@
             // If we haven't found a city name, search for a alt city name and use that
             if(addr.altStreets.length > 0){ //segment has alt names
                 for(var j=0;j<seg.attributes.streetIDs.length;j++){
-                    var altCity = W.model.cities.getObjectById(W.model.streets.getObjectById(seg.attributes.streetIDs[j]).cityID).attributes;
+                    var altCity = W.model.cities.getObjectById(W.model.streets.getObjectById(seg.attributes.streetIDs[j]).attributes.cityID).attributes;
 
-                    if(altCity.name !== null && altCity.englishName !== ""){
+                    if(altCity.name !== null && altCity.name !== ""){
                         cityName = altCity.name;
                         break;
                     }
@@ -204,12 +226,13 @@
         var ep;
         if (epAtStreet)
         {
-            let distanceToSegment = res.geometry.distanceTo(seg.geometry, { details: true });
-            ep = new NavigationPoint(offsetDistance(distanceToSegment.x1, distanceToSegment.y1, res.geometry.x, res.geometry.y));
+            // let distanceToSegment = res.geometry.distanceTo(seg.geometry, { details: true });
+            // const olPoint = offsetDistance(distanceToSegment.x1, distanceToSegment.y1, res.getOLGeometry().x, res.getOLGeometry().y).transform(epsg4326, epsg900913);
+            ep = new NavigationPoint(fractionPoint);
         }
         else
         {
-            ep = new NavigationPoint(res.geometry.clone());
+            ep = new NavigationPoint(geoJSONGeometry);
         }
 
         res.attributes.entryExitPoints.push(ep);
@@ -250,29 +273,42 @@
         localStorage.hn2rpp = JSON.stringify(settings);
     }
 
-    function onSelect() {
+    function onSelect(e) {
         const features = W.selectionManager.getSelectedFeatures();
 
-        if (!features || features.length === 0 || features[0].model.type !== "segment" || !features.some(f => f.model.attributes.hasHNs)) return;
+        if (!features || features.length === 0 || features[0].featureType !== "segment" || !features.some(f => f._wmeObject.attributes.hasHNs)) return;
+        let segElem = q('.segment-level-select');
+        if (typeof e.tries === 'undefined') { e.tries = 1; }
+        else { e.tries++; }
+        if (!segElem) {
+            if (e.tries > 50) {
+                err('could not find segment edit element');
+                return;
+            }
+            // log('seg elem not there yet ' + e.tries);
+            setTimeout(function () {onSelect(e);}, 50);
+            return;
+        }
 
         const makeRPPBtn = newEl('wz-button', {
-            size: 'sm',
             innerText: txt('makeRPPButtonText'),
             title: txt('makeRPPTitleText')});
 
         const makeRPPStreetSideBtn = newEl('wz-button', {
-            size: 'sm',
             innerText: txt('makeStreetSideRPPButtonText'),
             title: txt('makeStreetSideRPPTitleText')});
 
         makeRPPBtn.setAttribute('color', 'secondary');
+        makeRPPBtn.setAttribute('size', 'sm');
         makeRPPStreetSideBtn.setAttribute('color', 'secondary');
+        makeRPPStreetSideBtn.setAttribute('size', 'sm');
 
         makeRPPBtn.addEventListener('click', makeHNRPP);
         makeRPPStreetSideBtn.addEventListener('click', makeStreetSideRPP);
 
-        q('.more-actions').appendChild(makeRPPBtn);
-        q('.more-actions').appendChild(makeRPPStreetSideBtn);
+        segElem.append(makeRPPBtn);
+        segElem.append(makeRPPStreetSideBtn);
+
     }
 
     function hasDuplicates(poi, addr, hn) {
@@ -281,7 +317,7 @@
         {
             if (venues.hasOwnProperty(k)) {
                 const otherPOI = venues[k];
-                const otherAddr = otherPOI.getAddress().attributes;
+                const otherAddr = otherPOI.getAddress(W.model).attributes;
                 if (
                     poi.attributes.name == otherPOI.attributes.name
                     && hn == otherPOI.attributes.houseNumber
